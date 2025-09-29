@@ -1,0 +1,13 @@
+[project]
+name = "fake-job-posting"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.10.3",
+    "nltk>=3.9.1",
+    "numpy>=2.3.0",
+    "pandas>=2.3.0",
+    "scikit-learn>=1.7.0",
+    "spacy>=3.8.7",
+]
