@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 
 # Load model and vectorizer
 model = joblib.load('fake_job_model.pkl')
