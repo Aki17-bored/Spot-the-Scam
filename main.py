@@ -1,59 +1,78 @@
-import streamlit as st
+import gradio as gr
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load model and vectorizer
-model = joblib.load('fake_job_model.pkl')
-vectorizer = joblib.load('tfidf_vectorizer.pkl')
+model = joblib.load("fake_job_model.pkl")
+vectorizer = joblib.load("tfidf_vectorizer.pkl")
 
-# Title
-st.title("🛡️ Spot the Scam: Fake Job Detector")
+def process_file(file):
+    try:
+        # Read uploaded CSV
+        df = pd.read_csv(file.name)
 
-# Upload file
-uploaded_file = st.file_uploader("📤 Upload a job listings CSV", type=['csv'])
+        # Determine which text columns exist in CSV
+        text_columns = [col for col in ['title', 'description', 'company_profile', 'requirements', 'benefits'] if col in df.columns]
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.write("✅ Uploaded Data Preview:", df.head())
+        if not text_columns:
+            return "No text columns found!", None, None, None
 
-    # Determine which text columns exist in CSV
-    text_columns = [col for col in ['title', 'description', 'company_profile', 'requirements', 'benefits'] if col in df.columns]
+        # Combine text fields safely
+        df['combined_text'] = df[text_columns].fillna('').agg(' '.join, axis=1)
 
-    # Combine text fields safely
-    df['combined_text'] = df[text_columns].fillna('').agg(' '.join, axis=1)
+        # Vectorize
+        X = vectorizer.transform(df['combined_text'])
 
-    # Vectorize
-    X = vectorizer.transform(df['combined_text'])
+        # Predict
+        probs = model.predict_proba(X)[:, 1]
+        preds = model.predict(X)
 
-    # Predict
-    probs = model.predict_proba(X)[:, 1]
-    preds = model.predict(X)
+        df['fraud_probability'] = probs
+        df['prediction'] = preds
 
-    df['fraud_probability'] = probs
-    df['prediction'] = preds
+        # Prepare preview table
+        display_cols = ['title', 'location', 'fraud_probability', 'prediction']
+        display_cols = [col for col in display_cols if col in df.columns]
+        preview_table = df[display_cols].head(20)  # limit rows for UI
 
-    # Display results
-    display_cols = ['title', 'location', 'fraud_probability', 'prediction']
-    display_cols = [col for col in display_cols if col in df.columns]  # ensure columns exist
-    st.write("📋 Prediction Results:", df[display_cols])
+        # Pie chart
+        counts = df['prediction'].value_counts()
+        labels = ['Real', 'Fake']
+        sizes = [counts.get(0, 0), counts.get(1, 0)]
+        colors = ['green', 'red']
 
-    # Pie chart with default labels
-    st.subheader("🔍 Real vs Fake Distribution")
-    counts = df['prediction'].value_counts()
-    labels = ['Real', 'Fake']
-    sizes = [counts.get(0, 0), counts.get(1, 0)]  # ensures both classes are shown even if missing
-    colors = ['green', 'red']
+        fig1, ax1 = plt.subplots()
+        ax1.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors)
+        ax1.axis('equal')
+        pie_chart = fig1
 
-    fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors)
-    ax1.axis('equal')  # Equal aspect ratio ensures pie chart is circular
-    st.pyplot(fig1)
-
-    # Histogram of probabilities
-    if 'fraud_probability' in df.columns:
-        st.subheader("📊 Fraud Probability Distribution")
+        # Histogram
         fig2, ax2 = plt.subplots()
         sns.histplot(df['fraud_probability'], bins=20, kde=True, ax=ax2, color='orange')
-        st.pyplot(fig2)
+        ax2.set_title("Fraud Probability Distribution")
+        hist_chart = fig2
+
+        return "✅ Processed Successfully!", preview_table, pie_chart, hist_chart
+
+    except Exception as e:
+        return f"❌ Error: {str(e)}", None, None, None
+
+
+# Gradio Interface
+with gr.Blocks() as demo:
+    gr.Markdown("# 🛡️ Spot the Scam: Fake Job Detector")
+    with gr.Row():
+        file_input = gr.File(label="📤 Upload a job listings CSV", file_types=[".csv"])
+    with gr.Row():
+        status = gr.Label()
+    with gr.Row():
+        table = gr.Dataframe()
+    with gr.Row():
+        pie_output = gr.Plot()
+        hist_output = gr.Plot()
+
+    file_input.change(process_file, inputs=file_input, outputs=[status, table, pie_output, hist_output])
+
+demo.launch()
