@@ -9,7 +9,7 @@ import os
 model = joblib.load('fake_job_model.pkl')
 vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
-def process_file(file):
+def predict_jobs(file):
     try:
         # Read CSV
         df = pd.read_csv(file.name)
@@ -54,26 +54,24 @@ def process_file(file):
         ax2.set_title("Fraud Probability Distribution")
         hist_chart = fig2
 
-        return "✅ Processed Successfully!", preview_table, pie_chart, hist_chart
+        return preview_table, pie_chart, hist_chart
 
     except Exception as e:
-        return f"❌ Error: {str(e)}", None, None, None
+        return f"❌ Error: {str(e)}", None, None
 
-# Gradio Interface
+# Gradio Interface with plots and table
 with gr.Blocks() as demo:
     gr.Markdown("# 🛡️ Spot the Scam: Fake Job Detector")
     with gr.Row():
         file_input = gr.File(label="📤 Upload a job listings CSV", file_types=[".csv"])
-    with gr.Row():
-        status = gr.Label()
     with gr.Row():
         table = gr.Dataframe()
     with gr.Row():
         pie_output = gr.Plot()
         hist_output = gr.Plot()
 
-    file_input.change(process_file, inputs=file_input, outputs=[status, table, pie_output, hist_output])
+    file_input.change(predict_jobs, inputs=file_input, outputs=[table, pie_output, hist_output])
 
-# Render requires this to use its assigned port
+# Render / Cloud hosting settings
 port = int(os.environ.get("PORT", 7860))
-demo.launch(server_name="0.0.0.0", server_port=port)
+demo.launch(server_name="0.0.0.0", server_port=port, share=True)
