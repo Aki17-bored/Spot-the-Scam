@@ -3,23 +3,24 @@ import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 # Load model and vectorizer
-model = joblib.load("fake_job_model.pkl")
-vectorizer = joblib.load("tfidf_vectorizer.pkl")
+model = joblib.load('fake_job_model.pkl')
+vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
 def process_file(file):
     try:
-        # Read uploaded CSV
+        # Read CSV
         df = pd.read_csv(file.name)
 
-        # Determine which text columns exist in CSV
+        # Determine which text columns exist
         text_columns = [col for col in ['title', 'description', 'company_profile', 'requirements', 'benefits'] if col in df.columns]
 
         if not text_columns:
-            return "No text columns found!", None, None, None
+            return "No text columns found!", None, None
 
-        # Combine text fields safely
+        # Combine text fields
         df['combined_text'] = df[text_columns].fillna('').agg(' '.join, axis=1)
 
         # Vectorize
@@ -32,17 +33,16 @@ def process_file(file):
         df['fraud_probability'] = probs
         df['prediction'] = preds
 
-        # Prepare preview table
+        # Prepare table preview
         display_cols = ['title', 'location', 'fraud_probability', 'prediction']
         display_cols = [col for col in display_cols if col in df.columns]
-        preview_table = df[display_cols].head(20)  # limit rows for UI
+        preview_table = df[display_cols].head(20)  # show top 20 rows
 
         # Pie chart
         counts = df['prediction'].value_counts()
         labels = ['Real', 'Fake']
         sizes = [counts.get(0, 0), counts.get(1, 0)]
         colors = ['green', 'red']
-
         fig1, ax1 = plt.subplots()
         ax1.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors)
         ax1.axis('equal')
@@ -59,7 +59,6 @@ def process_file(file):
     except Exception as e:
         return f"❌ Error: {str(e)}", None, None, None
 
-
 # Gradio Interface
 with gr.Blocks() as demo:
     gr.Markdown("# 🛡️ Spot the Scam: Fake Job Detector")
@@ -75,4 +74,6 @@ with gr.Blocks() as demo:
 
     file_input.change(process_file, inputs=file_input, outputs=[status, table, pie_output, hist_output])
 
-demo.launch()
+# Render requires this to use its assigned port
+port = int(os.environ.get("PORT", 7860))
+demo.launch(server_name="0.0.0.0", server_port=port)
