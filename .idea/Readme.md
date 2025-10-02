@@ -41,25 +41,26 @@ Manual detection of fake job listings is slow and unreliable. This project aims 
 - Scikit-learn
 - Streamlit
 - Joblib
-- Matplotlib, Seaborn
+- Matplotlib, 
 
 ---
 
 ## 📁 Project Structure
 
 ```
-spot_the_scam_dashboard/
-├── dashboard.py           # Main Streamlit app
-├── eda.py                 # EDA and preprocessing
-├── processing.py          # Data cleaning and text feature generation
-├── model_training.py      # Model training and saving
-├── requirements.txt
-├── models/
-│   ├── fake_job_model.pkl
-│   └── tfidf_vectorizer.pkl
+├── .devcontainer/
+├── .idea/
 ├── datasets/
-│   ├── train.csv
-│   └── cleaned_data.csv
+├── eda/
+├── model/
+├── fake_job_model.pkl
+├── main.py
+├── pyproject.toml
+├── requirements.txt
+├── runtime.txt
+├── tfidf_vectorizer.pkl
+├── uv.lock
+└── README
 ```
 
 ---
