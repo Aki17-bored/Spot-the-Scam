@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Load model and vectorizer
 model = joblib.load('fake_job_model.pkl')
@@ -65,9 +64,11 @@ if uploaded_file is not None:
         ax1.axis('equal')
         st.pyplot(fig1)
 
-        # Histogram
+        # Histogram using Matplotlib only
         st.subheader("📊 Fraud Probability Distribution")
         fig2, ax2 = plt.subplots()
-        sns.histplot(df['fraud_probability'], bins=20, kde=True, ax=ax2, color='orange')
+        ax2.hist(df['fraud_probability'], bins=20, color='orange', alpha=0.7)
         ax2.set_title("Fraud Probability Distribution")
+        ax2.set_xlabel("Fraud Probability")
+        ax2.set_ylabel("Number of Listings")
         st.pyplot(fig2)
