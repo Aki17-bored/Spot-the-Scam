@@ -1,24 +1,27 @@
-import gradio as gr
+import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 
 # Load model and vectorizer
 model = joblib.load('fake_job_model.pkl')
 vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
+st.set_page_config(page_title="🛡️ Spot the Scam", layout="wide")
+st.title("🛡️ Spot the Scam: Fake Job Detector")
+
 def predict_jobs(file):
     try:
         # Read CSV
-        df = pd.read_csv(file.name)
+        df = pd.read_csv(file)
 
         # Determine which text columns exist
         text_columns = [col for col in ['title', 'description', 'company_profile', 'requirements', 'benefits'] if col in df.columns]
 
         if not text_columns:
-            return "No text columns found!", None, None
+            st.error("No text columns found in the CSV!")
+            return None
 
         # Combine text fields
         df['combined_text'] = df[text_columns].fillna('').agg(' '.join, axis=1)
@@ -33,12 +36,26 @@ def predict_jobs(file):
         df['fraud_probability'] = probs
         df['prediction'] = preds
 
-        # Prepare table preview
+        return df
+
+    except Exception as e:
+        st.error(f"❌ Error: {str(e)}")
+        return None
+
+# File uploader
+uploaded_file = st.file_uploader("📤 Upload a job listings CSV", type=["csv"])
+
+if uploaded_file is not None:
+    df = predict_jobs(uploaded_file)
+    if df is not None:
+        # Display top 20 rows
         display_cols = ['title', 'location', 'fraud_probability', 'prediction']
         display_cols = [col for col in display_cols if col in df.columns]
-        preview_table = df[display_cols].head(20)  # show top 20 rows
+        st.subheader("📋 Preview Table (Top 20 rows)")
+        st.dataframe(df[display_cols].head(20))
 
         # Pie chart
+        st.subheader("🥧 Real vs Fake Job Listings")
         counts = df['prediction'].value_counts()
         labels = ['Real', 'Fake']
         sizes = [counts.get(0, 0), counts.get(1, 0)]
@@ -46,32 +63,11 @@ def predict_jobs(file):
         fig1, ax1 = plt.subplots()
         ax1.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors)
         ax1.axis('equal')
-        pie_chart = fig1
+        st.pyplot(fig1)
 
         # Histogram
+        st.subheader("📊 Fraud Probability Distribution")
         fig2, ax2 = plt.subplots()
         sns.histplot(df['fraud_probability'], bins=20, kde=True, ax=ax2, color='orange')
         ax2.set_title("Fraud Probability Distribution")
-        hist_chart = fig2
-
-        return preview_table, pie_chart, hist_chart
-
-    except Exception as e:
-        return f"❌ Error: {str(e)}", None, None
-
-# Gradio Interface with plots and table
-with gr.Blocks() as demo:
-    gr.Markdown("# 🛡️ Spot the Scam: Fake Job Detector")
-    with gr.Row():
-        file_input = gr.File(label="📤 Upload a job listings CSV", file_types=[".csv"])
-    with gr.Row():
-        table = gr.Dataframe()
-    with gr.Row():
-        pie_output = gr.Plot()
-        hist_output = gr.Plot()
-
-    file_input.change(predict_jobs, inputs=file_input, outputs=[table, pie_output, hist_output])
-
-# Render / Cloud hosting settings
-port = int(os.environ.get("PORT", 7860))
-demo.launch(server_name="0.0.0.0", server_port=port, share=True)
+        st.pyplot(fig2)
